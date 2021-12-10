@@ -159,7 +159,7 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
     bckgA_reduced = np.zeros((len(dataset),focal_dimension))					# create empty for output
     bckgB_reduced = np.zeros((len(dataset),focal_dimension))
 
-    if args.flatfield is not None:
+    if args.flatfield is False:
         ff_matrix = load_flatfield()
 
     # Reduce data in loop
@@ -167,7 +167,7 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
         datread = np.array(dataset[i])
         datread_filt = copy.deepcopy(np.array(dataset[i]))
 
-        if args.flatfield is not None:
+        if args.flatfield is False:
             datread = apply_flatfield(datread,ff_matrix)
             datread_filt = apply_flatfield(datread,ff_matrix)
 
