@@ -159,7 +159,7 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
     bckgA_reduced = np.zeros((len(dataset),focal_dimension))					# create empty for output
     bckgB_reduced = np.zeros((len(dataset),focal_dimension))
 
-    if args.flatfield is False:
+    if args.flatfield is not False:
         ff_matrix = load_flatfield()
 
     # Reduce data in loop
@@ -167,7 +167,7 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
         datread = np.array(dataset[i])
         datread_filt = copy.deepcopy(np.array(dataset[i]))
 
-        if args.flatfield is False:
+        if args.flatfield is not False:
             datread = apply_flatfield(datread,ff_matrix)
             datread_filt = apply_flatfield(datread,ff_matrix)
 
@@ -247,7 +247,7 @@ def plot_detector_image(dataset_obj,args):
     reduced_subtracted = dataset_obj.get_reduced_subtracted()
     bckgA = dataset_obj.get_bckgA_avg()
     bckgB = dataset_obj.get_bckgB_avg()
-    bckg_mean = np.sum(bckgA,bckgB)/2
+    bckg_mean = (bckgA+bckgB)/2
 
     plt.figure(1114)
     plt.subplot(311)
@@ -256,11 +256,12 @@ def plot_detector_image(dataset_obj,args):
         plt.imshow(image,cmap='jet',norm=colors.LogNorm())
     else:
         plt.imshow(image, vmin=np.percentile(image,1), vmax=np.percentile(image,99))
+    plt.plot([0,1032],[args.roi_min,args.roi_min],color='k',linestyle='dashed')
+    plt.plot([0,1032],[args.roi_max,args.roi_max],color='k',linestyle='dashed')
 
     plt.subplot(312)
     plt.plot(reduced_subtracted,label="reduced spectra")
     plt.legend()
-    plt.show()
 
     plt.subplot(313)
     plt.plot(bckg_mean,label="background accumulation")
