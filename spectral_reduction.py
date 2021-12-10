@@ -159,15 +159,17 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
     bckgA_reduced = np.zeros((len(dataset),focal_dimension))					# create empty for output
     bckgB_reduced = np.zeros((len(dataset),focal_dimension))
 
-    ff_matrix = load_flatfield()
+    if args.ff_matrix is not None:
+        ff_matrix = load_flatfield()
 
     # Reduce data in loop
     for i in range(len(dataset)):
         datread = np.array(dataset[i])
         datread_filt = copy.deepcopy(np.array(dataset[i]))
 
-        datread = apply_flatfield(datread,ff_matrix)
-        datread_filt = apply_flatfield(datread,ff_matrix)
+        if args.ff_matrix is not None:
+            datread = apply_flatfield(datread,ff_matrix)
+            datread_filt = apply_flatfield(datread,ff_matrix)
 
         # If set, apply energy thresholds
         if thresholding == 1:
