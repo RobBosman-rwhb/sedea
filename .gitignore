@@ -3,3 +3,8 @@
 *.odp
 *.pptx
 
+__pycache__/
+archive/
+docs/
+notes/
+reference_spectra/
