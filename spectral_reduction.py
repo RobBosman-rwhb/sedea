@@ -15,6 +15,7 @@ import time
 import sys
 import os
 
+## Loading code functions
 
 def process_args():
     """Handles the argparse workflow for spectral resolution 
@@ -67,14 +68,33 @@ def process_args():
 
     return args
 
-# Main code functions
-
 def load_data(input_args):
     datafile = input_args.input_datafile
     data = h5py.File(datafile,'r') #open raw data .hdf file						# open data file
-    # find_h5py_data(data)                                                      # Future change to make finding the dataset be more intuitive.
+    datainfo = dict()
     dataset = data["entry/data/data"][()]
-    return dataset
+    datainfo['exp_time'] = np.array(["/entry/instrument/Shutter Time"])
+    datainfo['mean_values'] = np.array(["/entry/instrument/StatsMean"])
+    datainfo['Frame_No'] = len(np.array(["/entry/instrument/Frame Number"]))
+    return dataset,datainfo
+
+def load_flatfield():
+    input_file = "Mn_FFcoefficientMatrix_20211013.txt"
+    with open(input_file) as f:
+        FF_data = f.readlines()
+        rows = len(FF_data)
+    f.close()
+    columns = len(FF_data[0].split(" "))
+    FlatField = np.zeros((rows,columns),dtype=float)
+
+    for i in range(rows):
+        FF_data_line = FF_data[i].split(" ")
+        for indx,a in enumerate(FF_data_line):
+            FlatField[i,indx] = float(a.strip('/n'))
+    
+    return FlatField
+
+## Determine value functions
 
 def set_focal_orientation(dataset,data_orientation):
     if data_orientation == 1:
@@ -85,6 +105,8 @@ def set_focal_orientation(dataset,data_orientation):
         focal_dimension = max(dataset.shape)
         data_orientation = dataset.shape.index(focal_dimension)
     return focal_dimension, data_orientation
+
+## Image correction and processing functions
 
 def apply_thresholds(datread_filt):
     datread_filt[datread_filt<threshold] = 0								            # datread_filt set everything below threshold to 0
@@ -113,22 +135,6 @@ def average_image_gaps(dataimage):
 
 def average_borders(dataset):
     return average_image_gaps(dataset)
-
-def load_flatfield():
-    input_file = "Mn_FFcoefficientMatrix_20211013.txt"
-    with open(input_file) as f:
-        FF_data = f.readlines()
-        rows = len(FF_data)
-    f.close()
-    columns = len(FF_data[0].split(" "))
-    FlatField = np.zeros((rows,columns),dtype=float)
-
-    for i in range(rows):
-        FF_data_line = FF_data[i].split(" ")
-        for indx,a in enumerate(FF_data_line):
-            FlatField[i,indx] = float(a.strip('/n'))
-    
-    return FlatField
     
 def apply_flatfield(image,FlatField):
     ff_size = FlatField.size
@@ -138,6 +144,8 @@ def apply_flatfield(image,FlatField):
         return image
     ff_corrected = np.multiply(image,FlatField)
     return ff_corrected
+
+## Main code functions
 
 def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
     thresholding = 0
@@ -200,9 +208,15 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
 
     reduced_subtracted = reduced_average - np.mean([bckgA_average,bckgB_average],axis=0)
 
+    
+
     return xs(spectra_reduced,bckgA_reduced,bckgB_reduced,datasum,[ROImin,ROImax,ROI_bckg_A_min,ROI_bckg_A_max,ROI_bckg_B_min,ROI_bckg_B_max],
     reduced_avg=reduced_average,bckgA_avg=bckgA_average,bckgB_avg=bckgB_average,
     reduced_subtracted=reduced_subtracted)
+
+# def calculate_stats()
+
+## process after the image
 
 def interpolate_line(line,multiplier,smooth):
     interpolation_sampling = (len(line))*multiplier
@@ -227,7 +241,7 @@ def focally_interpolate_spectra(dataset_obj,image,ROI_min,ROI_max,focal_dimensio
     dataset_obj.set_focal_interpolation(focally_interpolated_spectra)
     return 
 
-# Plotting functions
+## Plotting functions
 
 def plot_selection_histogram(dataset,threshold,threshold_upper,threshold_2ph,threshold_upper_2ph):
     histodata1, histoedges = np.histogram(dataset[:50], bins=np.arange(2000,6000,10))				# create a histogram with bin set at 0.1 intervals between -5 to 30
@@ -269,7 +283,7 @@ def plot_detector_image(dataset_obj,args):
     plt.show()
 
 
-# output function
+## Output function
 
 def save_output(dataset_obj,args):
     complete_file = args.output_prefix+"_reduced.pickle"
@@ -283,9 +297,10 @@ def save_output(dataset_obj,args):
 def main():
     start_timer = time.process_time()
     args = process_args()
-    dataset = load_data(args)
-    focal_dimension, focal_orientation = set_focal_orientation(dataset, args.focal_orientation)
-    reduced_data = reduce_data(dataset, args, focal_orientation, focal_dimension,0)
+    data,dataset_info = load_data(args)
+    focal_dimension, focal_orientation = set_focal_orientation(data, args.focal_orientation)
+    reduced_data = reduce_data(data, args, focal_orientation, focal_dimension,0)
+    # calculate_stats = (data,dataset_info,reduced_data,args)
     focally_interpolate_spectra(reduced_data,reduced_data.get_summed_dataimage(),
                                         reduced_data.get_ROI()[0],
                                         reduced_data.get_ROI()[1],
