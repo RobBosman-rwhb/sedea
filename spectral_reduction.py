@@ -153,66 +153,68 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
     ROImin, ROImax = args.roi_min,args.roi_max
 
     # Calculate bckglimits
-    ROI_bckg_A_min = ROImin - (bckg_gap + bckg_width)
-    ROI_bckg_A_max = ROImin - bckg_gap
-    ROI_bckg_B_max = ROImax + (bckg_gap + bckg_width)
-    ROI_bckg_B_min = ROImax + bckg_gap
+    ROI_bg1_min = ROImin - (bckg_gap + bckg_width)
+    ROI_bg1_max = ROImin - bckg_gap
+    ROI_bg2_max = ROImax + (bckg_gap + bckg_width)
+    ROI_bg2_min = ROImax + bckg_gap
 
     print('Number of pulses in scan: ' + str(len(dataset)))							# print number of pulse
 
     # Create output variables reduced data
-    datasum = np.zeros(np.shape(dataset[0]))							    # create an empty data table type thing
-    datasum_filt = np.zeros(np.shape(dataset[0]))						    # create an empty dataset for the filtered
-    spectra_reduced = np.zeros((len(dataset),focal_dimension))					# create the empty for output
-    bckgA_reduced = np.zeros((len(dataset),focal_dimension))					# create empty for output
-    bckgB_reduced = np.zeros((len(dataset),focal_dimension))
+    summed_image = np.zeros(np.shape(dataset[0]))							    # create an empty data table type thing
+    summed_image_filt = np.zeros(np.shape(dataset[0]))						    # create an empty dataset for the filtered
+    reduced_spectra_matrix = np.zeros((len(dataset),focal_dimension))					# create the empty for output
+    bg1_reduced = np.zeros((len(dataset),focal_dimension))					# create empty for output
+    bg2_reduced = np.zeros((len(dataset),focal_dimension))
 
     if args.flatfield is not False:
         ff_matrix = load_flatfield()
 
     # Reduce data in loop
     for i in range(len(dataset)):
-        datread = np.array(dataset[i])
-        datread_filt = copy.deepcopy(np.array(dataset[i]))
+        single_shot_data = np.array(dataset[i])
+        single_shot_data_filt = copy.deepcopy(np.array(dataset[i]))
 
         if args.flatfield is not False:
-            datread = apply_flatfield(datread,ff_matrix)
-            datread_filt = apply_flatfield(datread,ff_matrix)
+            single_shot_data = apply_flatfield(single_shot_data,ff_matrix)
+            single_shot_data_filt = apply_flatfield(single_shot_data,ff_matrix)
 
         # If set, apply energy thresholds
         if thresholding == 1:
-            datread_filt = apply_thresholds(datread_filt)
-            datasum_filt = datasum_filt + datread_filt
+            single_shot_data_filt = apply_thresholds(single_shot_data_filt)
+            summed_image_filt = summed_image_filt + single_shot_data_filt
 
         # Creating the ROI spectra, and associated background spectra.
         if focal_orientation == 1:
-            spectra_reduced[i,:] = np.mean(datread_filt[ROImin:ROImax,:],axis=0)    
-            bckgA_reduced[i,:] = np.mean(datread_filt[ROI_bckg_A_min:ROI_bckg_A_max,:],axis=0) 
-            bckgB_reduced[i,:] = np.mean(datread_filt[ROI_bckg_B_min:ROI_bckg_B_max,:],axis=0) 
+            reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)    
+            bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0) 
+            bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0) 
         if focal_orientation == 2:
-            spectra_reduced[i,:] = np.mean(datread_filt[ROImin:ROImax,:],axis=0)      
-            bckgA_reduced[i,:] = np.mean(datread_filt[ROI_bckg_A_min:ROI_bckg_A_max,:],axis=0)   
-            bckgB_reduced[i,:] = np.mean(datread_filt[ROI_bckg_B_min:ROI_bckg_B_max,:],axis=0)  
+            reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)      
+            bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0)   
+            bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0) 
 
-        datasum = datasum + datread
+        
+
+        summed_image = summed_image + single_shot_data
 
     if args.average_borders == True:
-        datasum = average_borders(datasum)
-        spectra_reduced = average_borders(spectra_reduced)
-        bckgA_reduced = average_borders(bckgA_reduced)
-        bckgB_reduced = average_borders(bckgB_reduced)   
+        summed_image = average_borders(summed_image)
+        reduced_spectra_matrix = average_borders(reduced_spectra_matrix)
+        bg1_reduced = average_borders(bg1_reduced)
+        bg1_reduced = average_borders(bg2_reduced)   
 
-    reduced_average = np.mean(spectra_reduced,axis=0)
-    bckgA_average = np.mean(bckgA_reduced,axis=0)
-    bckgB_average = np.mean(bckgB_reduced,axis=0)
+    reduced_spectra_average = np.mean(reduced_spectra_matrix,axis=0)
+    bg1_average = np.mean(bg1_reduced,axis=0)
+    bg2_average = np.mean(bg2_reduced,axis=0)
 
-    reduced_subtracted = reduced_average - np.mean([bckgA_average,bckgB_average],axis=0)
+    reduced_subtracted = reduced_spectra_average - np.mean([bg1_average,bg2_average],axis=0)
 
-    
-
-    return xs(spectra_reduced,bckgA_reduced,bckgB_reduced,datasum,[ROImin,ROImax,ROI_bckg_A_min,ROI_bckg_A_max,ROI_bckg_B_min,ROI_bckg_B_max],
-    reduced_avg=reduced_average,bckgA_avg=bckgA_average,bckgB_avg=bckgB_average,
+    to_return_xes_dataset_object = xs(reduced_spectra_matrix,bg1_reduced,bg2_reduced,summed_image,[ROImin,ROImax,ROI_bg1_min,ROI_bg1_max,ROI_bg2_min,ROI_bg2_max],
+    reduced_avg=reduced_spectra_average,bckgA_avg=bg1_average,bckgB_avg=bg2_average,
     reduced_subtracted=reduced_subtracted)
+    
+    return to_return_xes_dataset_object
 
 # def calculate_stats()
 
