@@ -1,5 +1,5 @@
 # Radius of curvature demonstration
-import Energy_range_graph as Ecalcs
+import energy_range_graph as Ecalcs
 import matplotlib.pyplot as plt
 import numpy as np 
 import copy
@@ -117,10 +117,11 @@ def generate_array_coordinates(theta,bending_radius,Array_dimensions_XY,Analyser
 
 def calculate_modifications(theta,bending_radius,height_offset):
     # calculation provided by John Sutter optics department phi = (arctan(R+yc)tan(thetab)) - arctan
-    cot_term = 0.5*bending_radius*(1+(mpm.cot(90-theta)**2))
+    print(   0.5*400*(1+(mpm.cot(np.radians(75))**2))   )
+    cot_term = 0.5*bending_radius*(1+(mpm.cot(theta)**2))
     print(cot_term)
     distance_offset = math.sqrt((cot_term**2)-(height_offset**2))-cot_term
-    print(distance_offset)
+    return distance_offset
 
 ## Cryst E-Offset calculations.
 
@@ -295,6 +296,7 @@ if __name__ == '__main__':
 
     theta= 75.7
     bending_radius = 400
+
     Array_dimensions_XY = [4,4]
     Analyser_dimensions_XY = [110,25]
     Y_offset = 0
@@ -303,8 +305,13 @@ if __name__ == '__main__':
     dsep = -15
     Rs = 400
 
-    plo
-    print(calculate_modifications(theta,bending_radius,-37.5))
+    print(calculate_modifications(theta,bending_radius,12.5))
+
+    # x = 2.817
+    # a = -x*bending_radius*(mpm.csc(np.radians(theta)**2))-(x**2)+0
+    # print(a)
+
+
 
     # array_height1 = calculate_midpoint(75,500)
     # array_height2 = calculate_midpoint(85,400)

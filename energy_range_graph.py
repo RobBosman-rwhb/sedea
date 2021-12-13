@@ -1,8 +1,8 @@
 from typing import Callable
-from Analyser_crystal import analyser_crystal
+from analyser_crystal import analyser_crystal
 import numpy as np 
 import math
-import Analyser_array_positions as an
+import analyser_array_position as an
 import scipy.constants as cons
 import matplotlib.pyplot as plt
 import mpmath as mpm
