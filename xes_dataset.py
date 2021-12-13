@@ -8,7 +8,8 @@ class XesDataset:
                     ROI=None,reduced_spectra_filtered=None,
                     reduced_avg=None,bckgA_avg=None,bckgB_avg=None,
                     focal_interpolation=None,reduced_subtracted=None,
-                    interpolated_peak=None,dataset_name=None):
+                    interpolated_peak=None,dataset_name=None,
+                    total_exposure_time=None,single_exposure_time=None):
 
         self.reduced_spectra = reduced_spectra
         self.bcA_spectra = bg1_spectra
@@ -23,6 +24,11 @@ class XesDataset:
         self.reduced_subtracted = reduced_subtracted
         self.interpolated_peak = interpolated_peak
         self.dataset_name = dataset_name
+        self.total_exposure_time = total_exposure_time
+        self.single_exposure_time = single_exposure_time
+
+    ## CLASS FUNCTIONS ##
+
 
     ## SET FUNCTIONS ##
     def set_reduced_spectra(self,reduced_spectra):
@@ -57,6 +63,12 @@ class XesDataset:
     def set_ROI(self,ROI):
         self.ROI=ROI
 
+    def set_total_exposure_time(self,total_exposure_time):
+        self.total_exposure_time=total_exposure_time
+
+    def set_single_exposure_time(self,single_exposure_time):
+        self.single_exposure_time=single_exposure_time
+
     ## Post processing variables ##
 
     def set_focal_interpolation(self,focal_interpolation):
@@ -67,7 +79,6 @@ class XesDataset:
 
     def set_interpolated_peak(self,interpolated_peak):
         self.interpolated_peak=interpolated_peak
-
 
 
 
@@ -98,11 +109,17 @@ class XesDataset:
 
     ## Information variables ##
 
-    def dataset_name(self):
+    def get_dataset_name(self):
         return self.dataset_name
 
     def get_ROI(self):
         return self.ROI
+
+    def get_total_exposure_time(self):
+        return self.total_exposure_time
+
+    def get_single_exposure_time(self):
+        return self.single_exposure_time
 
     ## Post processing analysis variables ##
 

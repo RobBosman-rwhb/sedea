@@ -15,7 +15,7 @@ from scipy.ndimage.filters import uniform_filter1d
 from scipy import constants
 import scipy.interpolate
 import math
-import XES_spectral_decomposition as xsd
+import xes_spectral_decomposition as xsd
 import energy_range_graph as en
 
 
@@ -97,8 +97,9 @@ def calc_diff_std(feature_line):
 
 ### BACKGROUND ASSESSMENT FUNCTIONS ###
 
-def calc_photon_accumulation_rate(spectra,vertROI,exposure_time):
-    return np.mean(spectra[vertROI[0]:vertROI[1]])/exposure_time
+def calc_photon_accumulation_rate(detector_area,exposure_time):
+    print(exposure_time)
+    return np.mean(detector_area)/exposure_time
 
 def calculate_histogram(data,binning):
     return np.histogram(data,bins=np.linspace(data.min(),data.max(),binning))
@@ -142,74 +143,6 @@ def process_std_deviation(xes_dataset_object):
 
     plt.show()
 
-def stddev_variation(object_list,name_list,time,vertROI,displacement_I,scaled,absolute):
-    
-    stddev_all = np.zeros((len(object_list)))
-    stddev_ROI = np.zeros((len(object_list)))
-
-    plt.figure(1113)
-    for indx,i in enumerate(object_list):
-        reduced_spectra = i.get_reduced_subtracted()
-        if scaled == False:
-            feature_std_red,difference_scaled1 = calc_diff_std(reduced_spectra)
-        elif scaled == True:
-            feature_std_red,difference_scaled1 = calc_feature_std(reduced_spectra)
-        stddev_all[indx] = feature_std_red
-
-        reduced_spectra_verticalROI = reduced_spectra[vertROI[0]:vertROI[1]]
-        if scaled == False:
-            feature_std_redROI,difference_scaledROI = calc_diff_std(reduced_spectra_verticalROI)
-        elif scaled == True:
-            feature_std_redROI,difference_scaledROI = calc_feature_std(reduced_spectra_verticalROI)
-        stddev_ROI[indx] = feature_std_redROI
-        
-        if absolute == True:
-            plt.plot(scale_spectra(reduced_spectra)+(displacement_I*(indx+1)),label=f"{name_list[indx]}, σ{feature_std_red:.3}")
-            plt.text(x=0,y=displacement_I*(indx+1-displacement_I/2),s=f"{name_list[indx]}")
-        elif absolute == False:
-            plt.plot(difference_scaled1+(displacement_I*(indx+1)),label=f"{name_list[indx]}, σ{feature_std_red:.3}")
-            plt.text(x=0,y=displacement_I*(indx+1-displacement_I/2),s=f"{name_list[indx]}")            
-        # plt.legend()
-    plt.axvline(vertROI[0],linestyle='--',color='k')
-    plt.axvline(vertROI[1],linestyle='--',color='k')
-    plt.xlabel("Pixels",fontsize=12)
-    plt.ylabel("I arb",fontsize=12)
-
-    plt.figure(1114)
-    print(time.shape)
-    print(stddev_all.shape)
-    pars1, cov = curve_fit(f=func_powerlaw, xdata=time, ydata=stddev_all, p0=[0, 0], bounds=(-np.inf, np.inf))
-    fitted_curve_all = [ func_powerlaw(i,pars1[0],pars1[1]) for i in np.linspace(1,100,100) ]
-    pars2, cov = curve_fit(f=func_powerlaw, xdata=time, ydata=stddev_ROI, p0=[0, 0], bounds=(-np.inf, np.inf))
-    fitted_curve_ROI = [ func_powerlaw(i,pars2[0],pars2[1]) for i in np.linspace(1,100,100) ]
-    residuals_all = stddev_all - func_powerlaw(time, *pars1)
-    residuals_ROI = stddev_ROI - func_powerlaw(time, *pars2)
-
-    plt.plot(fitted_curve_all)
-    plt.plot(fitted_curve_ROI)
-    plt.scatter(time,stddev_all,label="σAll")
-    plt.scatter(time,stddev_ROI,label="σROI")
-    plt.xlabel("Exposure Time (sec)",fontsize=12)
-    plt.ylabel("Pixel variation stddev σ",fontsize=12)
-    plt.legend()
-
-    plt.figure(1115)
-    pixel_values = np.linspace(vertROI[0],vertROI[1],vertROI[1]-vertROI[0])
-    reduced_spectra = object_list[0].get_reduced_avg()
-    if scaled == True:
-        plt.plot(pixel_values,scale_spectra(reduced_spectra[vertROI[0]:vertROI[1]]),label=f"{name_list[0]}, scaled")
-    elif scaled == False: 
-        plt.plot(pixel_values,scale_spectra(reduced_spectra[vertROI[0]:vertROI[1]]),label=f"{name_list[0]}")
-    reduced_spectra = object_list[-1].get_reduced_avg()
-    if scaled == True:
-        plt.plot(pixel_values,scale_spectra(reduced_spectra[vertROI[0]:vertROI[1]]),label=f"{name_list[-1]}, scaled")
-    elif scaled == False:
-        plt.plot(pixel_values,scale_spectra(reduced_spectra[vertROI[0]:vertROI[1]]),label=f"{name_list[-1]}")
-    plt.ylabel("Intensity",fontsize=12)
-    plt.xlabel("Pixels",fontsize=12)
-    plt.legend()
-
-    plt.show()
 
 def histogram_plots(object_list,name_list):
 
