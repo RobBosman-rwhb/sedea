@@ -303,11 +303,11 @@ def main():
     focal_dimension, focal_orientation = set_focal_orientation(data, args.focal_orientation)
     reduced_data = reduce_data(data, args, focal_orientation, focal_dimension,0)
     # calculate_stats = (data,dataset_info,reduced_data,args)
-    focally_interpolate_spectra(reduced_data,reduced_data.get_summed_dataimage(),
-                                        reduced_data.get_ROI()[0],
-                                        reduced_data.get_ROI()[1],
-                                        focal_dimension)
-    reduced_data = interpolate_peak(reduced_data,525,760)
+    # focally_interpolate_spectra(reduced_data,reduced_data.get_summed_dataimage(),
+                                        # reduced_data.get_ROI()[0],
+                                        # reduced_data.get_ROI()[1],
+                                        # focal_dimension)
+    # reduced_data = interpolate_peak(reduced_data,525,760)
     
 
     if args.plot_reduced == True:
