@@ -131,4 +131,3 @@ class XesDataset:
     
     def get_interpolated_peak(self):
         return self.interpolated_peak
-

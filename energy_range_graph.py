@@ -346,7 +346,7 @@ def energy_references():
 if __name__ == '__main__':
 
 
-    plot_detector_height()
+    # plot_detector_height()
 
 
     Rs = 500
@@ -356,14 +356,18 @@ if __name__ == '__main__':
     bragg_angle_range = [75,85]
     crystal_height = 25
 
-    print(Calc_BraggFromE(7110.6,dspace_Calc("Si",[5,3,1])))
-    print(calc_crystal_signal_range_above_midpoint(7110.59,7110.61,500,["Si",[5,3,1]])[0]+an.calculate_midpoint(71.75,500))
+    print(Calc_BraggFromE(8977,dspace_Calc("Si",[5,5,3])))
+    # print(calc_crystal_signal_range_above_midpoint(7110.59,7110.61,500,["Si",[5,3,1]])[0]+an.calculate_midpoint(71.75,500))
+
+    
 
     top_position = an.calculate_midpoint(85,Rs)
     bottom_position = an.calculate_midpoint(75,Rs)
 
     top_bound = top_position-((25+10)*1.5)
     bottom_bound = bottom_position+((25+10)*1.5)
+
+    print(an.calculate_midpoint(77.9,500))
 
     # print(top_position)
     # print(bottom_position)

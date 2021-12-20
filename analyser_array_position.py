@@ -1,10 +1,15 @@
 # Radius of curvature demonstration
+from re import M
+from mpmath.functions.functions import cot
+from numpy.lib.function_base import angle
+import scipy.optimize as opt
 import energy_range_graph as Ecalcs
 import matplotlib.pyplot as plt
 import numpy as np 
 import copy
 import math
 import mpmath as mpm
+import numpy as np
 
 def X_position(theta,bending_radius,crystal_offset_in_X):
     # X_displacement_theta = math.asin(abs(crystal_offset_in_X)/bending_radius)
@@ -115,13 +120,26 @@ def generate_array_coordinates(theta,bending_radius,Array_dimensions_XY,Analyser
     
     return array_crystal_positions,crystals_pitch
 
-def calculate_modifications(theta,bending_radius,height_offset):
+def cot_term(bending_radius:float,theta:float):
+    return 0.5*bending_radius*(1+(mpm.cot(mpm.radians(theta))))
+
+def calculate_distance_adjustment(x,theta,bending_radius,height_offset):
     # calculation provided by John Sutter optics department phi = (arctan(R+yc)tan(thetab)) - arctan
-    print(   0.5*400*(1+(mpm.cot(np.radians(75))**2))   )
-    cot_term = 0.5*bending_radius*(1+(mpm.cot(theta)**2))
-    print(cot_term)
-    distance_offset = math.sqrt((cot_term**2)-(height_offset**2))-cot_term
-    return distance_offset
+    a = cot_term(bending_radius,theta)
+    boggle = (x+a)**2 + (height_offset**2) - (a**2)
+    return np.array(boggle,dtype='float64')
+
+def calculate_angle_adjustment(Xc,Yc,bending_radius,theta):
+    """
+    Calculate the rotation adjustment for crystals positioned 
+    above and below on the array.
+    """
+    Xc = float(Xc)
+    a = bending_radius+Xc
+    tangent_term = mpm.tan(np.radians(theta))
+    first_term = float(((a)*tangent_term)/(bending_radius-Yc*tangent_term))
+    second_term = float((a)*tangent_term/(bending_radius+Yc*tangent_term))
+    return 0.5*(np.arctan(first_term)-np.arctan(second_term))
 
 ## Cryst E-Offset calculations.
 
@@ -294,8 +312,12 @@ class crystal_bank:
 
 if __name__ == '__main__':
 
-    theta= 75.7
+    theta= 79.6
     bending_radius = 400
+    cryst_width = 25
+    sep = 5
+    # cryst_height = 0.5*(sep+cryst_width)
+    cryst_height = 15
 
     Array_dimensions_XY = [4,4]
     Analyser_dimensions_XY = [110,25]
@@ -304,8 +326,28 @@ if __name__ == '__main__':
     theta_radians = np.radians(theta)
     dsep = -15
     Rs = 400
+    x = np.array(1,dtype='float64')
 
-    print(calculate_modifications(theta,bending_radius,12.5))
+    args = (theta,
+        bending_radius,
+        cryst_height
+        )
+
+
+    b = opt.root(calculate_distance_adjustment,x0=x,args=(theta,bending_radius,cryst_height),method='hybr')
+
+    # print(b)
+    if b.success:
+        print(f"Crystal heigh is {cryst_height}")
+        print(f"Xc determined as {b.x}, final value {b.fun}")
+        distance_adjustment = b.x
+        angle_adjustment = calculate_angle_adjustment(distance_adjustment,cryst_height,bending_radius,theta)
+        angle_adjustment = np.degrees(angle_adjustment)
+        print(f"φ is {angle_adjustment}")
+
+    
+
+    # print(calculate_distance_adjustment(-2.8174,theta,bending_radius,37.5))
 
     # x = 2.817
     # a = -x*bending_radius*(mpm.csc(np.radians(theta)**2))-(x**2)+0

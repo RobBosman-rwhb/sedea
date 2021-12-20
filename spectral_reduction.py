@@ -24,19 +24,80 @@ def process_args():
 
     #   Arguements related to inputs.
     input_args = argparse.ArgumentParser()
-    input_args.add_argument("-i","--input_datafile",type=str,help="Input hdf5 or nexus file with XES data")
-    input_args.add_argument("-o","--output_folder",type=str,help="Output folder for output files, will use the pwd if not specified")
-    input_args.add_argument("-p","--output_prefix",type=str,help="Prefix for output files, will use Input datafile if not specified")
-    input_args.add_argument("-fo","--focal_orientation",type=int,help="Set whether the orientation the first or second array dimension")
-    input_args.add_argument("-rmin","--roi_min",type=int,help="Set True if you want us to plot, default is 0")
-    input_args.add_argument("-rmax","--roi_max",type=int,help="Set True if you want us to plot, default is 0")
-    input_args.add_argument("-ff","--flatfield",type=int,help="file to apply flatfield correction")
+    input_args.add_argument(
+        "-i","--input_datafile",
+        type=str,
+        help="Input hdf5 or nexus file with XES data"
+        )
+
+    input_args.add_argument("-o","--output_folder",
+        type=str,
+        help="""Output folder for output files, will use the pwd 
+        if not specified"""
+        )
+
+    input_args.add_argument("-p","--output_prefix",
+        type=str,
+        help="""Prefix for output files, will use Input datafile if 
+        not specified"""
+        )
+
+    input_args.add_argument("-fo","--focal_orientation",
+        type=int,
+        help="""Set whether the orientation the 
+        first or second array dimension"""
+        )
+
+    input_args.add_argument("-rmin","--roi_min",
+        type=int,
+        help="Set True if you want us to plot, default is 0"
+        )
+    
+    input_args.add_argument("-rmax","--roi_max",
+        type=int,
+        help="Set True if you want us to plot, default is 0"
+        )
+
+    input_args.add_argument("-ff","--flatfield",
+        type=int,
+        help="File to apply flatfield correction."
+        )
+
+    input_args.add_argument("-bgg","--background_gap",
+        type=int,
+        help="Seperation between ROI and background area, by deafult 0."
+        )
+
+    input_args.add_argument("-bgw","--background_width",
+        type=int,
+        help="Background section width, by default same as ROI width."
+        )
 
     #    boolen arguements asking the program to do something else.
-    input_args.add_argument("-x","--plot_reduced",action='store_true',help="Set, if you want us to plot")
-    input_args.add_argument("-s","--save_output",action='store_true',help="Set true to save the reduced data, produces pickle file with dataset object")
-    input_args.add_argument("-ab","--average_borders",action='store_true',help="include to  average the borders of the image")
-    input_args.add_argument("-pc","--plot_colourmap",action='store_true',help="include to  average the borders of the image")
+    input_args.add_argument("-x","--plot_reduced",
+        action='store_true',
+        help="Set, if you want us to plot")
+
+    input_args.add_argument("-s","--save_output",
+        action='store_true',
+        help="""Set true to save the reduced data, produces pickle 
+        file with dataset object"""
+        )
+
+    input_args.add_argument("-ab","--average_borders",
+        action='store_true',
+        help="include to  average the borders of the image"
+        )
+
+    input_args.add_argument("-pc","--plot_colourmap",
+        action='store_true',
+        help="include to  average the borders of the image"
+        )
+
+    input_args.add_argument("-th","--thresholding",
+        action='store_true',
+        help="include to perform averaging"
+        )
 
     args = input_args.parse_args()
 
@@ -60,8 +121,14 @@ def process_args():
         args.plot_reduced = False
 
     if not args.roi_min and not args.roi_max:
-        args.roi_min = 30
-        args.roi_max = 55
+        args.roi_min = False
+        args.roi_max = False
+
+    if not args.background_gap:
+        args.background_gap = 0
+
+    if not args.background_width:
+        args.background_width = args.roi_max - args.roi_min
 
     if not args.flatfield:
         args.flatfield = False
@@ -74,10 +141,31 @@ def load_data(input_args):
     data = h5py.File(datafile,'r') #open raw data .hdf file						# open data file
     datainfo = dict()
     dataset = data["entry/data/data"][()]
+    dataset_shape = np.array(dataset.shape)
+    datainfo['dataset_shape'] = dataset_shape
     datainfo['exp_time'] = np.array(data["/entry/instrument/NDAttributes/Shutter Time"])
     datainfo['mean_values'] = np.array(data["/entry/instrument/NDAttributes/StatsMean"])
-    datainfo['Frame_No'] = len(np.array(data["/entry/instrument/NDAttributes/Frame Number"]))
-    return dataset,datainfo
+    datainfo['frame_no'] = len(np.array(data["/entry/instrument/NDAttributes/Frame Number"]))
+    datainfo['frame_index'] = int(list(np.where(datainfo['frame_no']==datainfo['dataset_shape']))[0])
+    
+    image_dimensions = np.delete(dataset_shape,datainfo['frame_index'])
+    datainfo['image_dimensions'] = image_dimensions
+
+    if input_args.focal_orientation == None:
+        focal_orientation = np.where(np.max(image_dimensions)==image_dimensions)[0]
+        input_args.focal_orientation = focal_orientation
+        datainfo['focal_oritenation'] = focal_orientation
+    else:
+        focal_orientation = input_args.focal_orientation
+
+    if input_args.roi_min is False:
+        roi_selection_dim = np.delete(image_dimensions,focal_orientation)
+        roi_selection_dim = np.where(np.max(roi_selection_dim))
+        input_args.roi_min = (image_dimensions[roi_selection_dim]/2)-10
+        input_args.roi_max = (image_dimensions[roi_selection_dim]/2)+10
+        input_args.background_width = input_args.roi_max - input_args.roi_min
+
+    return dataset,datainfo,input_args
 
 def load_flatfield():
     input_file = "Mn_FFcoefficientMatrix_20211013.txt"
@@ -97,15 +185,6 @@ def load_flatfield():
 
 ## Determine value functions
 
-def set_focal_orientation(dataset,data_orientation):
-    if data_orientation == 1:
-        focal_dimension = dataset.shape[data_orientation]
-    elif data_orientation == 2:
-        focal_dimension = dataset.shape[data_orientation]
-    elif data_orientation == None:
-        focal_dimension = max(dataset.shape)
-        data_orientation = dataset.shape.index(focal_dimension)
-    return focal_dimension, data_orientation
 
 ## Image correction and processing functions
 
@@ -148,25 +227,23 @@ def apply_flatfield(image,FlatField):
 
 ## Main code functions
 
-def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
-    thresholding = 0
-    bckg_gap, bckg_width = 0,20
-    ROImin, ROImax = args.roi_min,args.roi_max
+def reduce_data(dataset,info,args):
 
     # Calculate bckglimits
-    ROI_bg1_min = ROImin - (bckg_gap + bckg_width)
-    ROI_bg1_max = ROImin - bckg_gap
-    ROI_bg2_max = ROImax + (bckg_gap + bckg_width)
-    ROI_bg2_min = ROImax + bckg_gap
+    ROImin, ROImax = args.roi_min,args.roi_max
+    ROI_bg1_min = ROImin - (args.background_gap + args.background_width)
+    ROI_bg1_max = ROImin - args.background_gap
+    ROI_bg2_max = ROImax + (args.background_gap + args.background_width)
+    ROI_bg2_min = ROImax + args.background_gap
 
     print('Number of pulses in scan: ' + str(len(dataset)))							# print number of pulse
 
     # Create output variables reduced data
     summed_image = np.zeros(np.shape(dataset[0]))							    # create an empty data table type thing
     summed_image_filt = np.zeros(np.shape(dataset[0]))						    # create an empty dataset for the filtered
-    reduced_spectra_matrix = np.zeros((len(dataset),focal_dimension))					# create the empty for output
-    bg1_reduced = np.zeros((len(dataset),focal_dimension))					# create empty for output
-    bg2_reduced = np.zeros((len(dataset),focal_dimension))
+    reduced_spectra_matrix = np.zeros((len(dataset),np.max(info['image_dimensions'])))					# create the empty for output
+    bg1_reduced = np.zeros((len(dataset),np.max(info['image_dimensions'])))					# create empty for output
+    bg2_reduced = np.zeros((len(dataset),np.max(info['image_dimensions'])))
 
     if args.flatfield is not False:
         ff_matrix = load_flatfield()
@@ -181,16 +258,16 @@ def reduce_data(dataset,args,focal_orientation,focal_dimension,thresholding):
             single_shot_data_filt = apply_flatfield(single_shot_data,ff_matrix)
 
         # If set, apply energy thresholds
-        if thresholding == 1:
+        if args.thresholding == True:
             single_shot_data_filt = apply_thresholds(single_shot_data_filt)
             summed_image_filt = summed_image_filt + single_shot_data_filt
 
         # Creating the ROI spectra, and associated background spectra.
-        if focal_orientation == 1:
+        if args.focal_orientation == 0:
             reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)    
             bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0) 
             bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0) 
-        if focal_orientation == 2:
+        if args.focal_orientation == 1:
             reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)      
             bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0)   
             bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0) 
@@ -302,7 +379,7 @@ def plot_detector_image(dataset_obj,args):
     plt.show()
 
 
-## Output function
+## Output functionthe dark lord of sauron
 
 def save_output(dataset_obj,args):
     complete_file = args.output_prefix+"_reduced.pickle"
@@ -316,9 +393,9 @@ def save_output(dataset_obj,args):
 def main():
     start_timer = time.process_time()
     args = process_args()
-    data,dataset_info = load_data(args)
-    focal_dimension, focal_orientation = set_focal_orientation(data, args.focal_orientation)
-    reduced_data = reduce_data(data, args, focal_orientation, focal_dimension,0)
+    data,dataset_info,args = load_data(args)
+    # focal_dimension, focal_orientation = set_focal_orientation(data, args.focal_orientation)
+    reduced_data = reduce_data(data, dataset_info,args)
     # calculate_stats = (data,dataset_info,reduced_data,args)
     # focally_interpolate_spectra(reduced_data,reduced_data.get_summed_dataimage(),
                                         # reduced_data.get_ROI()[0],
