@@ -19,8 +19,10 @@ import os
 ## Loading code functions
 
 def process_args():
-    """Handles the argparse workflow for spectral resolution 
-    returns the args object for use in the code later"""
+    """
+    Handles the argparse workflow for spectral resolution 
+    returns the args object for use in the code later
+    """
 
     #   Arguements related to inputs.
     input_args = argparse.ArgumentParser()
@@ -355,6 +357,7 @@ def plot_detector_image(dataset_obj,args):
     bckgA = dataset_obj.get_bckgA_avg()
     bckgB = dataset_obj.get_bckgB_avg()
     bckg_mean = (bckgA+bckgB)/2
+    roi_selections = dataset_obj.get_ROI()
 
     single_exp_time = dataset_obj.get_single_exposure_time()
     photons_per_sec = photon_rate(bckg_mean,single_exp_time)
@@ -366,8 +369,15 @@ def plot_detector_image(dataset_obj,args):
         plt.imshow(image,cmap='jet',norm=colors.LogNorm())
     else:
         plt.imshow(image, vmin=np.percentile(image,1), vmax=np.percentile(image,99))
-    plt.plot([0,1032],[args.roi_min,args.roi_min],color='k',linestyle='dashed')
-    plt.plot([0,1032],[args.roi_max,args.roi_max],color='k',linestyle='dashed')
+    # central selection
+    plt.plot([0,1032],[args.roi_min,args.roi_min],color='r',linestyle='dashed')
+    plt.plot([0,1032],[args.roi_max,args.roi_max],color='r',linestyle='dashed')
+    # upper roi selection
+    plt.plot([0,1032],[roi_selections[2],roi_selections[2]],color='k',linestyle='dotted')
+    plt.plot([0,1032],[roi_selections[3],roi_selections[3]],color='k',linestyle='dotted')
+    # lower roi selection
+    plt.plot([0,1032],[roi_selections[4],roi_selections[4]],color='k',linestyle='dotted')
+    plt.plot([0,1032],[roi_selections[5],roi_selections[5]],color='k',linestyle='dotted')
 
     plt.subplot(312)
     plt.plot(reduced_subtracted,label="reduced spectra")
