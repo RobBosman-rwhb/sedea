@@ -61,7 +61,7 @@ def process_args():
         )
 
     input_args.add_argument("-ff","--flatfield",
-        type=int,
+        type=str,
         help="File to apply flatfield correction."
         )
 
@@ -169,9 +169,16 @@ def load_data(input_args):
 
     return dataset,datainfo,input_args
 
-def load_flatfield():
-    input_file = "Mn_FFcoefficientMatrix_20211013.txt"
-    with open(input_file) as f:
+def load_flatfield(input_flatfield):
+    """
+    Applying flatfield to the dataset, take input flatfield file
+    """
+    
+    if not os.path.isfile(input_flatfield):
+        print ("Flatfield file not found, skipping flatfield")
+        return False
+
+    with open(input_flatfield) as f:
         FF_data = f.readlines()
         rows = len(FF_data)
     f.close()
@@ -248,7 +255,9 @@ def reduce_data(dataset,info,args):
     bg2_reduced = np.zeros((len(dataset),np.max(info['image_dimensions'])))
 
     if args.flatfield is not False:
-        ff_matrix = load_flatfield()
+        ff_matrix = load_flatfield(args.flatfield)
+        if ff_matrix is False:
+            args.flatfield = False
 
     # Reduce data in loop
     for i in range(len(dataset)):
@@ -263,6 +272,10 @@ def reduce_data(dataset,info,args):
         if args.thresholding == True:
             single_shot_data_filt = apply_thresholds(single_shot_data_filt)
             summed_image_filt = summed_image_filt + single_shot_data_filt
+
+        # Apply zero averaging
+            # Find the index for all the zeros
+            # cycle through all the zeros and create an average of those around them.
 
         # Creating the ROI spectra, and associated background spectra.
         if args.focal_orientation == 0:
