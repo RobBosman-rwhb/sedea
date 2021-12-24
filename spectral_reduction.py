@@ -295,6 +295,12 @@ def reduce_data(dataset,info,args):
         bg1_reduced = average_borders(bg1_reduced)
         bg1_reduced = average_borders(bg2_reduced)   
 
+    # Subtraction on a shot-by-shot basis
+    shot_by_shot_subtracted = reduced_spectra_matrix - np.mean([bg1_reduced,bg2_reduced],axis=0)
+    reduced_subtracted = np.mean(shot_by_shot_subtracted,axis=0)
+
+
+    # Subtraction of the average
     reduced_spectra_average = np.mean(reduced_spectra_matrix,axis=0)
     bg1_average = np.mean(bg1_reduced,axis=0)
     bg2_average = np.mean(bg2_reduced,axis=0)
@@ -306,7 +312,7 @@ def reduce_data(dataset,info,args):
                                     bg2_reduced,
                                     summed_image,
                                     [ROImin,ROImax,ROI_bg1_min,ROI_bg1_max,ROI_bg2_min,ROI_bg2_max],
-                                    reduced_avg=reduced_spectra_average,
+                                    reduced=reduced_spectra_average,
                                     bckgA_avg=bg1_average,
                                     bckgB_avg=bg2_average,
                                     reduced_subtracted=reduced_subtracted,
@@ -322,8 +328,7 @@ def calculate_timing_information(dataset_info):
     assert np.all(shutter_time_array == shutter_time_array[0])
     single_exposure = float(shutter_time_array[0])
     total_exposure = np.sum(shutter_time_array)
-    return total_exposure,single_exposure
-# def calculate_stats()
+    return total_exposure,single_exposure    
 
 ## process after the image
 
@@ -428,6 +433,8 @@ def main():
     total_exposure,single_exposure = calculate_timing_information(dataset_info)
     reduced_data.set_total_exposure_time(total_exposure)
     reduced_data.set_single_exposure_time(single_exposure)
+
+    # assess_noise_suppression(reduced_data)
 
     if args.plot_reduced == True:
         plot_detector_image(reduced_data,args)
