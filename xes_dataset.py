@@ -6,20 +6,18 @@ class XesDataset:
     def __init__(self,reduced_spectra,bg1_spectra=None,
                     bg2_spectra=None,summed_dataimage=None,
                     ROI=None,reduced_spectra_filtered=None,
-                    reduced_avg=None,bckgA_avg=None,bckgB_avg=None,
+                    shot_by_shot_subtracted=None,
                     focal_interpolation=None,reduced_subtracted=None,
                     interpolated_peak=None,dataset_name=None,
                     total_exposure_time=None,single_exposure_time=None):
 
         self.reduced_spectra = reduced_spectra
-        self.bcA_spectra = bg1_spectra
+        self.bg1_spectra = bg1_spectra
         self.bg2_spectra = bg2_spectra
         self.summed_dataimage = summed_dataimage
         self.ROI = ROI
         self.reduced_spectra_filtered = reduced_spectra_filtered
-        self.reduced_avg = reduced_avg
-        self.bckgA_avg = bckgA_avg
-        self.bckgB_avg = bckgB_avg
+        self.shot_by_shot_subtracted = shot_by_shot_subtracted
         self.focal_interpolation = focal_interpolation
         self.reduced_subtracted = reduced_subtracted
         self.interpolated_peak = interpolated_peak
@@ -45,15 +43,10 @@ class XesDataset:
 
     def set_summed_dataimage(self,summed_dataimage):
         self.summed_dataimage=summed_dataimage
+
+    def set_shot_by_shot(self,shot_by_shot_subtracted):
+        self.shot_by_shot_subtracted=shot_by_shot_subtracted
     
-    def set_reduced_avg(self,reduced_avg):
-        self.reduced_avg=reduced_avg
-
-    def set_bckgA_avg(self,bckgA_avg):
-        self.bckgA_avg=bckgA_avg
-
-    def set_bckgB_avg(self,bckgB_avg):
-        self.bckg_avg=bckgB_avg
 
     ## Information variables ##
 
@@ -98,14 +91,8 @@ class XesDataset:
     def get_summed_dataimage(self):
         return self.summed_dataimage
 
-    def get_reduced_avg(self):
-        return self.reduced_avg
-
-    def get_bckgA_avg(self):
-        return self.bckgA_avg
-
-    def get_bckgB_avg(self):
-        return self.bckgB_avg
+    def get_shot_by_shot(self):
+        return self.shot_by_shot_subtracted
 
     ## Information variables ##
 

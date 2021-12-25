@@ -300,21 +300,12 @@ def reduce_data(dataset,info,args):
     reduced_subtracted = np.mean(shot_by_shot_subtracted,axis=0)
 
 
-    # Subtraction of the average
-    reduced_spectra_average = np.mean(reduced_spectra_matrix,axis=0)
-    bg1_average = np.mean(bg1_reduced,axis=0)
-    bg2_average = np.mean(bg2_reduced,axis=0)
-
-    reduced_subtracted = reduced_spectra_average - np.mean([bg1_average,bg2_average],axis=0)
-
     to_return_xes_dataset_object = xs(reduced_spectra_matrix,
                                     bg1_reduced,
                                     bg2_reduced,
                                     summed_image,
                                     [ROImin,ROImax,ROI_bg1_min,ROI_bg1_max,ROI_bg2_min,ROI_bg2_max],
-                                    reduced=reduced_spectra_average,
-                                    bckgA_avg=bg1_average,
-                                    bckgB_avg=bg2_average,
+                                    shot_by_shot_subtracted=shot_by_shot_subtracted,
                                     reduced_subtracted=reduced_subtracted,
                                     dataset_name=args.output_prefix)
     
@@ -372,9 +363,9 @@ def plot_selection_histogram(dataset,threshold,threshold_upper,threshold_2ph,thr
 def plot_detector_image(dataset_obj,args):
     image = dataset_obj.get_summed_dataimage()
     reduced_subtracted = dataset_obj.get_reduced_subtracted()
-    bckgA = dataset_obj.get_bckgA_avg()
-    bckgB = dataset_obj.get_bckgB_avg()
-    bckg_mean = (bckgA+bckgB)/2
+    bg1 = dataset_obj.get_bg1_spectra()
+    bg2 = dataset_obj.get_bg2_spectra()
+    bckg_mean = (np.mean(bg1,axis=0)+np.mean(bg2,axis=0))/2
     roi_selections = dataset_obj.get_ROI()
 
     single_exp_time = dataset_obj.get_single_exposure_time()
