@@ -9,7 +9,8 @@ class XesDataset:
                     shot_by_shot_subtracted=None,
                     focal_interpolation=None,reduced_subtracted=None,
                     interpolated_peak=None,dataset_name=None,
-                    total_exposure_time=None,single_exposure_time=None):
+                    total_exposure_time=None,single_exposure_time=None,
+                    total_images=None):
 
         self.reduced_spectra = reduced_spectra
         self.bg1_spectra = bg1_spectra
@@ -24,6 +25,7 @@ class XesDataset:
         self.dataset_name = dataset_name
         self.total_exposure_time = total_exposure_time
         self.single_exposure_time = single_exposure_time
+        self.total_images = total_images
 
     ## CLASS FUNCTIONS ##
 
@@ -61,6 +63,9 @@ class XesDataset:
 
     def set_single_exposure_time(self,single_exposure_time):
         self.single_exposure_time=single_exposure_time
+    
+    def set_total_images(self,total_images):
+        self.total_images = total_images
 
     ## Post processing variables ##
 
@@ -107,6 +112,9 @@ class XesDataset:
 
     def get_single_exposure_time(self):
         return self.single_exposure_time
+
+    def get_total_images(self):
+        return self.total_images
 
     ## Post processing analysis variables ##
 

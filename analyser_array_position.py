@@ -312,12 +312,11 @@ class crystal_bank:
 
 if __name__ == '__main__':
 
-    theta= 79.6
+    theta= 79.7
     bending_radius = 400
     cryst_width = 25
-    sep = 5
-    # cryst_height = 0.5*(sep+cryst_width)
-    cryst_height = 15
+    sep = 6
+    cryst_height = 1.5*(sep+cryst_width)
 
     Array_dimensions_XY = [4,4]
     Analyser_dimensions_XY = [110,25]
@@ -328,10 +327,6 @@ if __name__ == '__main__':
     Rs = 400
     x = np.array(1,dtype='float64')
 
-    args = (theta,
-        bending_radius,
-        cryst_height
-        )
 
 
     b = opt.root(calculate_distance_adjustment,x0=x,args=(theta,bending_radius,cryst_height),method='hybr')

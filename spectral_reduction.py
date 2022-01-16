@@ -3,10 +3,14 @@
 from functools import reduce
 from matplotlib import pyplot as plt
 from matplotlib import colors
+from numpy.core.fromnumeric import std
 from scipy import interpolate
 from pathlib import Path
 from xes_dataset import XesDataset as xs
 from xes_signal_analysis import calc_photon_accumulation_rate as photon_rate
+from xes_signal_analysis import calc_diff_std
+from scipy.optimize import curve_fit
+import xes_signal_analysis as xsa
 import numpy as np
 import argparse
 import pickle
@@ -245,7 +249,8 @@ def reduce_data(dataset,info,args):
     ROI_bg2_max = ROImax + (args.background_gap + args.background_width)
     ROI_bg2_min = ROImax + args.background_gap
 
-    print('Number of pulses in scan: ' + str(len(dataset)))							# print number of pulse
+    dataset_images = len(dataset)
+    print('Number of pulses in scan: ' + str(dataset_images))							# print number of pulse
 
     # Create output variables reduced data
     summed_image = np.zeros(np.shape(dataset[0]))							    # create an empty data table type thing
@@ -307,7 +312,7 @@ def reduce_data(dataset,info,args):
                                     [ROImin,ROImax,ROI_bg1_min,ROI_bg1_max,ROI_bg2_min,ROI_bg2_max],
                                     shot_by_shot_subtracted=shot_by_shot_subtracted,
                                     reduced_subtracted=reduced_subtracted,
-                                    dataset_name=args.output_prefix)
+                                    dataset_name=args.output_prefix,total_images=dataset_images)
     
     return to_return_xes_dataset_object
 
@@ -347,6 +352,13 @@ def focally_interpolate_spectra(dataset_obj,image,ROI_min,ROI_max,focal_dimensio
     return 
 
 ## Plotting functions
+# def function_fits(x_data,y_data):
+#     power_pars, cov = curve_fit(f=xsa.func_powerlaw, xdata=x_data, ydata=y_data,
+#                              p0=[0.05, -0.1], bounds=(-1, 1),method='dogbox')
+#     power_curve_fit = [ xsa.func_powerlaw(i,power_pars[0],power_pars[1]) for i in image_sampling ]
+#     poly_fit_1 = 
+
+
 def plot_selection_histogram(dataset,threshold,threshold_upper,threshold_2ph,threshold_upper_2ph):
     histodata1, histoedges = np.histogram(dataset[:50], bins=np.arange(2000,6000,10))				# create a histogram with bin set at 0.1 intervals between -5 to 30
     plt.figure(1113)												# create a plt with name 1113 (#matlab)
@@ -371,8 +383,48 @@ def plot_detector_image(dataset_obj,args):
     single_exp_time = dataset_obj.get_single_exposure_time()
     photons_per_sec = photon_rate(bckg_mean,single_exp_time)
 
-    plt.figure(1114)
-    plt.subplot(311)
+    # Calculate the commit times for wonderful things!!!
+    start1 = time.process_time()
+    shot_by_shot_matrix = dataset_obj.get_shot_by_shot()
+    std_sampling_rate = 200
+    images = dataset_obj.get_total_images()
+    rounded_images = images-(images%std_sampling_rate)
+    step_size = rounded_images/std_sampling_rate  
+
+    number_photons = np.zeros((std_sampling_rate))
+    running_diff_std = np.zeros((std_sampling_rate))
+    image_sampling = np.linspace(step_size,images,std_sampling_rate)
+
+    for indx,i in enumerate(image_sampling):
+        a = int(i)
+        reduced_spectra = np.mean(shot_by_shot_matrix[0:a,:],axis=0)
+        running_diff_std[indx],_ = calc_diff_std(reduced_spectra)
+        number_photons[indx] = np.sum(shot_by_shot_matrix[0:a,:])
+
+    end1 = time.process_time()
+
+    print(f"Time in sec to run std calc = {end1-start1}")
+
+    pars1, cov = curve_fit(f=xsa.func_powerlaw, xdata=number_photons, ydata=running_diff_std,
+                             p0=[0, 0], bounds=(-1, 1),method='dogbox')
+    
+    # print(image_sampling)
+    power_curve_fit = [ xsa.func_powerlaw(i,pars1[0],pars1[1]) for i in number_photons ]
+    # poly_fit_1 = 
+
+    plt.figure(1113)
+    plt.subplot(122)
+    plt.scatter(number_photons,running_diff_std,marker="1",s=15)
+    plt.plot(number_photons,power_curve_fit)
+    plt.ylabel("pixel-to-pixle σ")
+    plt.xlabel("Total number photons")
+
+    # plt.subplot(212)
+    # plt.plot(np.diff(running_diff_std))
+
+
+    # plt.figure(1114)
+    plt.subplot(321)
 
     if args.plot_colourmap == True:
         plt.imshow(image,cmap='jet',norm=colors.LogNorm())
@@ -388,17 +440,17 @@ def plot_detector_image(dataset_obj,args):
     plt.plot([0,1032],[roi_selections[4],roi_selections[4]],color='k',linestyle='dotted')
     plt.plot([0,1032],[roi_selections[5],roi_selections[5]],color='k',linestyle='dotted')
 
-    plt.subplot(312)
+    plt.subplot(323)
     plt.plot(reduced_subtracted,label="reduced spectra")
     plt.legend()
 
-    plt.subplot(313)
+    plt.subplot(325)
     plt.plot(bckg_mean,label=f"{photons_per_sec} ph/s")
     plt.legend()
     plt.show()
 
 
-## Output functionthe dark lord of sauron
+## Output function the dark lord of sauron
 
 def save_output(dataset_obj,args):
     complete_file = args.output_prefix+"_reduced.pickle"

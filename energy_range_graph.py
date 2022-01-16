@@ -269,7 +269,7 @@ def plot_crystal_E_range_in_bragg():
     plt.show()
  
 def plot_detector_height():
-    Rs = 500
+    Rs = 400
     half_crystal = 12.5
 
     Fekalpha12 = [6385,6403,6410]                           # https://sci-hub.se/https://doi.org/10.1021/acs.inorgchem.0c01620
@@ -346,7 +346,7 @@ def energy_references():
 if __name__ == '__main__':
 
 
-    # plot_detector_height()
+    plot_detector_height()
 
 
     Rs = 500
