@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 
+from cgi import test
 from functools import reduce
 from matplotlib import pyplot as plt
 from matplotlib import colors
 from numpy.core.fromnumeric import std
+from pandas import cut
 from scipy import interpolate
 from pathlib import Path
 from xes_dataset import XesDataset as xs
@@ -405,23 +407,64 @@ def plot_detector_image(dataset_obj,args):
 
     print(f"Time in sec to run std calc = {end1-start1}")
 
-    pars1, cov = curve_fit(f=xsa.func_powerlaw, xdata=number_photons, ydata=running_diff_std,
-                             p0=[0, 0], bounds=(-1, 1),method='dogbox')
-    
-    # print(image_sampling)
-    power_curve_fit = [ xsa.func_powerlaw(i,pars1[0],pars1[1]) for i in number_photons ]
-    # poly_fit_1 = 
+    start2 = time.process_time()
 
-    plt.figure(1113)
-    plt.subplot(122)
-    plt.scatter(number_photons,running_diff_std,marker="1",s=15)
-    plt.plot(number_photons,power_curve_fit)
+    number_photons = number_photons[:]
+    running_diff_std = running_diff_std[:]
+
+    pars1, cov = curve_fit(f=xsa.func_powerlaw, xdata=number_photons[:], ydata=running_diff_std[:],
+                             p0=[0, 0, 0], bounds=(-1000, 1000),method='dogbox')
+    
+
+    # print(image_sampling)
+    power_curve_fit = [ xsa.func_powerlaw(i,pars1[0],pars1[1],pars1[2]) for i in number_photons ]
+
+    estimated_double_stdsig = xsa.func_powerlaw(number_photons[-1]*2,pars1[0],pars1[1],pars1[2])
+    percentage_improvement = xsa.calc_percentage_improvement(running_diff_std,estimated_double_stdsig)
+    print(pars1)
+    minimal_percentage = 0.05
+    cutoff_std = (minimal_percentage*running_diff_std[0])+estimated_double_stdsig/(1+minimal_percentage)
+    cutoff_photons = ((cutoff_std/pars1[0])**(1/pars1[1]))
+    end2 = time.process_time()
+
+    print(f"Time to run the fitting calculation = {end2-start2}")
+
+    # poly_fit_1 = 
+    printable_final_std = round(running_diff_std[-1],8)
+    printable_est_std = round(estimated_double_stdsig,8)
+    printable_percent_imp = round(percentage_improvement,2)
+
+
+    # plt.figure(1113)
+    plt.subplot(324)
+    plt.scatter(number_photons,running_diff_std,marker="1",s=15,label=f"Final std = {printable_final_std}")
+    plt.plot(number_photons,power_curve_fit,color='red')
+    plt.plot([0,number_photons[-1]],[estimated_double_stdsig,estimated_double_stdsig],
+            label=f"2x std = {printable_est_std}, % improvement={printable_percent_imp})",color='k')
+    plt.plot([cutoff_photons,cutoff_photons],[estimated_double_stdsig,running_diff_std[0]],lineStyle='--',color='k')
     plt.ylabel("pixel-to-pixle σ")
     plt.xlabel("Total number photons")
+    plt.legend()
 
     # plt.subplot(212)
     # plt.plot(np.diff(running_diff_std))
 
+    moving_average,interp_x,interp_y=xsa.calculate_interpolation(reduced_spectra,10,0.8)
+    max_interp = round(np.max(interp_y),4)
+    max_average = round(np.max(moving_average),4)
+
+    linear_interp = interpolate.UnivariateSpline(interp_x,interp_y-max_interp/2,s=0)
+    r1,r2 = linear_interp.roots()
+    fwhm1 = r2-r1
+
+
+
+    plt.subplot(322)
+    plt.plot(reduced_spectra,label=f"Reduced spectra",color='k',linewidth=0.1)
+    plt.plot(moving_average,label=f"Moving average, peak max={max_average}",linestyle='--',color='r')
+    plt.plot(interp_x,interp_y,label=f"Cubic spline, peak max={max_interp}",linestyle='--',color='b')
+    plt.axvspan(r1,r2,label=f"FWHM = {fwhm1}",alpha=0.5)
+    plt.legend()
 
     # plt.figure(1114)
     plt.subplot(321)
