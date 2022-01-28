@@ -2,9 +2,9 @@ from operator import index
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
-import analyser_array_positions as an
+import analyser_array_position as an
 import energy_range_graph as er
-from Analyser_crystal import analyser_crystal as Cryst
+from analyser_crystal import analyser_crystal as Cryst
 from itertools import compress
 from itertools import combinations_with_replacement
 import matplotlib.patches as mpatches
@@ -96,13 +96,17 @@ def generate_reflection_table(max_indicies):
 
     return return_list,indicies_list
 
-def generate_permitted_reflections(highest_indicies):
+def generate_permitted_reflections(highest_indicies,lattice_type):
     permitted_indicies_boolean = []
     cubic_indicies = generate_reflection_table(highest_indicies)
 
     print(cubic_indicies)
     for i in range(len(cubic_indicies)):
-        permitted_indicies_boolean.append(determine_permitted(cubic_indicies[i]))
+        if lattice_type == "FCC":
+            permitted_indicies_boolean.append(determine_permitted(cubic_indicies[i]))
+        elif lattice_type == "P":
+            permitted_indicies_boolean.append(cubic_indicies[i])
+        
     diamond_cubic_indicies = list(compress(cubic_indicies,permitted_indicies_boolean))
     diamond_cubic_indicies.pop(0)
 
@@ -127,7 +131,7 @@ def main():
     angle_range = [75,85]
     crystal_height = 30
     indicies_depth = 15
-    ac_objects_list = generate_permitted_reflections(indicies_depth)
+    ac_objects_list = generate_permitted_reflections(indicies_depth,"P")
     a = ac_objects_list[1]
     
     # Silicon_energies = [ er.crystal_E_range_over_braggRange(angle_range,Rs,crystal_height,["Si",i]) for i in harmonics_list ]
@@ -141,12 +145,14 @@ def main():
         harmonics_list = a.get_harmonic_list()
         Si_energies = [ er.crystal_E_range_over_braggRange(angle_range,Rs,crystal_height,["Si",i]) for i in harmonics_list ]
         Ge_energies = [ er.crystal_E_range_over_braggRange(angle_range,Rs,crystal_height,["Ge",i]) for i in harmonics_list ]
+
         base_harmonic.append(harmonics_list[0])
         for indx_2,i in enumerate(Si_energies):
             plt.hlines(y=(indx*2)-1, xmin=i[0], xmax=i[1], linewidth=2, color='r')
-            # plt.text(i[0],(indx*2)-1.5,"Si "+np.array2string(harmonics_list[indx_2]),fontsize=8)
+            print(harmonics_list[indx_2])
+            plt.text(i[0],(indx*2)-1.5,"Si "+str(harmonics_list[indx_2]),fontsize=6)
             plt.hlines(y=indx*2, xmin=Ge_energies[indx_2][0], xmax=Ge_energies[indx_2][1], linewidth=2, color='g')
-            # plt.text(Ge_energies[indx_2][0],(indx*2)-0.5,"Ge "+np.array2string(harmonics_list[indx_2]),fontsize=8)
+            plt.text(Ge_energies[indx_2][0],(indx*2)-0.5,"Ge "+str(harmonics_list[indx_2]),fontsize=6)
     # plt.yticks(list(np.linspace(-1,21,12)),base_harmonic)
 
     reference_edict = er.energy_references()
