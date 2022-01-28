@@ -14,6 +14,7 @@ from xes_signal_analysis import calc_diff_std
 from scipy.optimize import curve_fit
 import xes_signal_analysis as xsa
 import numpy as np
+import warnings
 import argparse
 import pickle
 import copy
@@ -409,42 +410,46 @@ def plot_detector_image(dataset_obj,args):
 
     start2 = time.process_time()
 
-    number_photons = number_photons[:]
-    running_diff_std = running_diff_std[:]
 
-    pars1, cov = curve_fit(f=xsa.func_powerlaw, xdata=number_photons[:], ydata=running_diff_std[:],
-                             p0=[0, 0, 0], bounds=(-1000, 1000),method='dogbox')
-    
+    try:
 
-    # print(image_sampling)
-    power_curve_fit = [ xsa.func_powerlaw(i,pars1[0],pars1[1],pars1[2]) for i in number_photons ]
+        pars1, cov = curve_fit(f=xsa.func_powerlaw, xdata=number_photons[:], ydata=running_diff_std[:],
+                                p0=[0, 0, 0], bounds=(-1000, 1000),method='dogbox')
+        
+        power_curve_fit = [ xsa.func_powerlaw(i,pars1[0],pars1[1],pars1[2]) for i in number_photons ]
 
-    estimated_double_stdsig = xsa.func_powerlaw(number_photons[-1]*2,pars1[0],pars1[1],pars1[2])
-    percentage_improvement = xsa.calc_percentage_improvement(running_diff_std,estimated_double_stdsig)
-    print(pars1)
-    minimal_percentage = 0.05
-    cutoff_std = (minimal_percentage*running_diff_std[0])+estimated_double_stdsig/(1+minimal_percentage)
-    cutoff_photons = ((cutoff_std/pars1[0])**(1/pars1[1]))
-    end2 = time.process_time()
-
-    print(f"Time to run the fitting calculation = {end2-start2}")
-
-    # poly_fit_1 = 
-    printable_final_std = round(running_diff_std[-1],8)
-    printable_est_std = round(estimated_double_stdsig,8)
-    printable_percent_imp = round(percentage_improvement,2)
+        estimated_double_stdsig = xsa.func_powerlaw(number_photons[-1]*2,pars1[0],pars1[1],pars1[2])
+        percentage_improvement = xsa.calc_percentage_improvement(running_diff_std,estimated_double_stdsig)
+        print(pars1)
+        minimal_percentage = 0.05
+        cutoff_std = (minimal_percentage*running_diff_std[0])+estimated_double_stdsig/(1+minimal_percentage)
+        cutoff_photons = ((cutoff_std/pars1[0])**(1/pars1[1]))
 
 
-    # plt.figure(1113)
-    plt.subplot(324)
-    plt.scatter(number_photons,running_diff_std,marker="1",s=15,label=f"Final std = {printable_final_std}")
-    plt.plot(number_photons,power_curve_fit,color='red')
-    plt.plot([0,number_photons[-1]],[estimated_double_stdsig,estimated_double_stdsig],
-            label=f"2x std = {printable_est_std}, % improvement={printable_percent_imp})",color='k')
-    plt.plot([cutoff_photons,cutoff_photons],[estimated_double_stdsig,running_diff_std[0]],lineStyle='--',color='k')
-    plt.ylabel("pixel-to-pixle σ")
-    plt.xlabel("Total number photons")
-    plt.legend()
+
+        end2 = time.process_time()
+
+        print(f"Time to run the fitting calculation = {end2-start2}")
+
+        # poly_fit_1 = 
+        printable_final_std = round(running_diff_std[-1],8)
+        printable_est_std = round(estimated_double_stdsig,8)
+        printable_percent_imp = round(percentage_improvement,2)
+
+
+        # plt.figure(1113)
+        plt.subplot(324)
+        plt.scatter(number_photons,running_diff_std,marker="1",s=15,label=f"Final std = {printable_final_std}")
+        plt.plot(number_photons,power_curve_fit,color='red')
+        plt.plot([0,number_photons[-1]],[estimated_double_stdsig,estimated_double_stdsig],
+                label=f"2x std = {printable_est_std}, % improvement={printable_percent_imp})",color='k')
+        plt.plot([cutoff_photons,cutoff_photons],[estimated_double_stdsig,running_diff_std[0]],lineStyle='--',color='k')
+        plt.ylabel("pixel-to-pixle σ")
+        plt.xlabel("Total number photons")
+        plt.legend()
+
+    except :
+        print("Failed to converge power fit, will not plot calc std")
 
     # plt.subplot(212)
     # plt.plot(np.diff(running_diff_std))
