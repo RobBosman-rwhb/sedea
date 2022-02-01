@@ -79,9 +79,6 @@ def get_reduced_spectrum_subtracted(object_list):
     return reduced_spectrum
 
 ### STDDEV FUNCTION ###
-def func_powerlaw(x, a, b, c):
-    return (a*np.power(x, -b))+c
-
 def scale_spectra(spectral_line):
     return np.divide(np.subtract(spectral_line, min(spectral_line)),max(spectral_line)-min(spectral_line))
 
@@ -93,9 +90,6 @@ def calc_feature_std(spectral_line):
 def calc_diff_std(feature_line):
     diff = np.diff(feature_line)
     return np.std(diff),diff
-
-def calc_percentage_improvement(x_data,asymptote_level):
-    return ((x_data[-1]-asymptote_level) / (x_data[0]-x_data[-1])) * 100
 
 
 
