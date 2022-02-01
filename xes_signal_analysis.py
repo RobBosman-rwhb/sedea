@@ -106,6 +106,11 @@ def calculate_interpolation(spectra,moving_windows,smoothing):
     spectral_length = len(spectra)
     reduced_spectra_convolved = uniform_filter1d(spectra, size=moving_windows)
     x = np.linspace(0, spectral_length, num=spectral_length, endpoint=True)
+
+    # Calculate smoothing
+    # Inplemented automatic smoothness suggested here https://github.com/scipy/scipy/issues/11916
+    smoothing = 1/np.std(spectra)
+    print(smoothing)
     reduced_spectra_interp1d = scipy.interpolate.splrep(x, spectra,s=smoothing)
     newx = np.linspace(1,spectral_length,spectral_length)
     newy = scipy.interpolate.splev(newx,reduced_spectra_interp1d,der=0)

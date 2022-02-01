@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-from cgi import test
-from functools import reduce
 from matplotlib import pyplot as plt
 from matplotlib import colors
 from numpy.core.fromnumeric import std
@@ -406,7 +404,8 @@ def plot_detector_image(dataset_obj,args):
     plt.plot(number_photons,power_curve_fit,color='red')
     plt.plot([0,number_photons[-1]],[est_double_std,est_double_std],
             label=f"2x std = {printable_est_std}, % improvement={printable_percent_imp})",color='k')
-    plt.plot([cutoff_photons,cutoff_photons],[est_double_std,running_diff_std[0]],lineStyle='--',color='k')
+    # plt.plot([cutoff_photons,cutoff_photons],[est_double_std,running_diff_std[0]],lineStyle='--',color='k')
+    # Needs reworking probably with the algo
     plt.ylabel("pixel-to-pixle σ")
     plt.xlabel("Total number photons")
     plt.legend()

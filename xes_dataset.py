@@ -141,6 +141,15 @@ class XesDataset:
     def calc_percentage_improvement(self,x_data,asymptote_level):
         return ((x_data[-1]-asymptote_level) / (x_data[0]-x_data[-1])) * 100
 
+    def power_func_fit(self,x,y):
+        try:
+            pars1, cov = curve_fit(f=self.func_powerlaw, xdata=x, ydata=y,
+                            p0=[0, 0, 0], bounds=(-1000, 1000),method='dogbox')
+        except RuntimeError:
+            pars1,_,_ = self.power_func_fit(x[:-10],y[:-10])
+
+        return pars1,len(x),len(y)
+
 
     def do_std_fitting_for_plots(self):
         ## Grabs some data that we need
@@ -166,8 +175,7 @@ class XesDataset:
             running_pixel_std[indx] = np.std(reduced_spectra)
             number_photons[indx] = np.sum(shot_by_shot_matrix[0:a,:])
 
-        pars1, cov = curve_fit(f=self.func_powerlaw, xdata=number_photons[:], ydata=running_pixel_std[:],
-                                p0=[0, 0, 0], bounds=(-1000, 1000),method='dogbox')
+        pars1, _, _ = self.power_func_fit(number_photons,running_pixel_std)
 
         fitted_std_curve = [ self.func_powerlaw(i,pars1[0],pars1[1],pars1[2]) for i in number_photons ]
 
