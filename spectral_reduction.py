@@ -384,56 +384,8 @@ def plot_detector_image(dataset_obj,args):
 
     # Calculate the commit times for wonderful things!!!
 
-    power_fit = dataset_obj.get_power_fit_dict()
-    running_diff_std = power_fit["running_std"]
-    number_photons = power_fit["tot_photons_array"]
-    est_double_std = power_fit["est_double_std"]
-    percentage_improvement = power_fit["expected_improv_percent"]
-    power_curve_fit = power_fit["fitted_std_curve"]
-    cutoff_photons = power_fit["cutoff_photon"]
-
-    # poly_fit_1 = 
-    printable_final_std = round(running_diff_std[-1],8)
-    printable_est_std = round(est_double_std,8)
-    printable_percent_imp = round(percentage_improvement,2)
-
-
-    # plt.figure(1113)
-    plt.subplot(324)
-    plt.scatter(number_photons,running_diff_std,marker="1",s=15,label=f"Final std = {printable_final_std}")
-    plt.plot(number_photons,power_curve_fit,color='red')
-    plt.plot([0,number_photons[-1]],[est_double_std,est_double_std],
-            label=f"2x std = {printable_est_std}, % improvement={printable_percent_imp})",color='k')
-    # plt.plot([cutoff_photons,cutoff_photons],[est_double_std,running_diff_std[0]],lineStyle='--',color='k')
-    # Needs reworking probably with the algo
-    plt.ylabel("pixel-to-pixle σ")
-    plt.xlabel("Total number photons")
-    plt.legend()
-
-
-    # plt.subplot(212)
-    # plt.plot(np.diff(running_diff_std))
-
-    moving_average,interp_x,interp_y=xsa.calculate_interpolation(reduced_subtracted,10,2)
-    max_interp = round(np.max(interp_y),4)
-    max_average = round(np.max(moving_average),4)
-
-    linear_interp = interpolate.UnivariateSpline(interp_x,interp_y-max_interp/2,s=0)
-    
-    r1,r2 = linear_interp.roots()
-    fwhm1 = r2-r1
-
-
-    plt.subplot(322)
-    plt.plot(reduced_subtracted,label=f"Reduced spectra",color='k',linewidth=0.1)
-    plt.plot(moving_average,label=f"Moving average, peak max={max_average}",linestyle='--',color='r')
-    plt.plot(interp_x,interp_y,label=f"Cubic spline, peak max={max_interp}",linestyle='--',color='b')
-    plt.axvspan(r1,r2,label=f"FWHM = {fwhm1}",alpha=0.5)
-    plt.legend()
-
-
     # plt.figure(1114)
-    plt.subplot(321)
+    plt.subplot(311)
 
     if args.plot_colourmap == True:
         plt.imshow(image,cmap='jet',norm=colors.LogNorm())
@@ -449,11 +401,11 @@ def plot_detector_image(dataset_obj,args):
     plt.plot([0,1032],[roi_selections[4],roi_selections[4]],color='k',linestyle='dotted')
     plt.plot([0,1032],[roi_selections[5],roi_selections[5]],color='k',linestyle='dotted')
 
-    plt.subplot(323)
+    plt.subplot(312)
     plt.plot(reduced_subtracted,label="reduced spectra")
     plt.legend()
 
-    plt.subplot(325)
+    plt.subplot(313)
     plt.plot(bckg_mean,label=f"{photons_per_sec} ph/s")
     plt.legend()
     plt.show()
