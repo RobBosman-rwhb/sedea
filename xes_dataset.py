@@ -1,6 +1,12 @@
+from operator import index
 import numpy as np
+import random
+import xes_signal_analysis as xsa
 from numpy.core.numeric import rollaxis
 from scipy.optimize import curve_fit
+from scipy import interpolate
+from matplotlib import pyplot as plt
+
 
 class XesDataset:
 
@@ -128,12 +134,12 @@ class XesDataset:
 
     def get_power_fit_dict(self):
         if self.power_fit_dict == None:
-            return self.do_std_fitting_for_plots()
+            return self.do_std_calc_for_plots()
         elif type(self.power_fit_dict) == "dict": # Needs to have an fitting failure check
             return self.power_fit_dict
 
 
-    # Active Functions
+    # Functions that should really be public? or in xsa?
 
     def func_powerlaw(self,x, a, b, c):
         return (a*np.power(x, -b))+c
@@ -150,33 +156,124 @@ class XesDataset:
 
         return pars1,len(x),len(y)
 
+    def generate_image_averaging(self,sampling_freq,images):
+        """ Function to calculate a sampling of images and handle non-divisible inputs."""
+        rounded_images = images - (images%sampling_freq)
+        sample_no = int(rounded_images/sampling_freq)
+        image_sampling = np.linspace(sampling_freq,rounded_images,sample_no)
+        return image_sampling,sample_no
 
-    def do_std_fitting_for_plots(self):
-        ## Grabs some data that we need
-    
-        shot_by_shot_matrix = self.get_shot_by_shot()
-        images = self.get_total_images()
+    def generate_recombined_spectra(self,sbs_matrix,num):
+        index_numbers = random.sample(range(0,len(sbs_matrix[:,0])),int(num))
+        return np.mean(sbs_matrix[index_numbers,:],axis=0)
+
+    # Private functions that must not be touched?
+
+    def set_sampling_frequency(self):
+        images = self.total_images
+        if images < 1 and images > 10:
+            std_sampling_frequency = images
+        if images > 10:
+            std_sampling_frequency = round(images,-1)
+        return std_sampling_frequency
+
+    def fit_cubic_spline(self,spectra):
+        """Function to fit cublic spline without setting the s variable
+        does a grid scan over the variable. Principally used with FWHM std calc"""
+        # print(np.linspace(1,len(spectra),int(len(spectra)*10)))
+        a = np.logspace(0,3,30)-1
+        for i in a:
+            try:
+                interp_x,interp_y=xsa.calculate_cubic_interpolation(spectra,i)
+                linear_interp = interpolate.UnivariateSpline(interp_x,interp_y-round(np.max(interp_y),4)/2,s=0)
+                root1,root2 = linear_interp.roots()
+                print("Assessed cubic spline and fitted roots")
+                cubic_dict = { "x_fit":interp_x,
+                                "y_fit":interp_y,
+                                "rvals":[root1,root2]}
+                return cubic_dict
+            except ValueError:
+                continue
+        print("Found no cubic spline")
+        return -1
+
+    def do_moving_average_for_plots(self):
+        spectra = self.reduced_subtracted
+        spectral_length = len(spectra)
+        moving_average = xsa.calculate_moving_average(spectra,10)
+        max_average = round(np.max(moving_average),4)
+        y = np.linspace(0, spectral_length, num=spectral_length, endpoint=True)
+        return moving_average,max_average,y
+
+    def do_fwhm_assesment_for_plots(self):
+        ## Calculate the std as a function of something
+        shot_by_shot = self.shot_by_shot_subtracted
+        images = self.total_images
+
+        if images < 100:
+            return -1
+
+        repeats = 5
+        sample_freq = self.set_sampling_frequency()
+        sampling_array,samples = self.generate_image_averaging(sample_freq,images)
+        sampling_array = np.insert(sampling_array,0,1,axis=0)
+        samples = samples +1
+        fwhm_stddevs = np.zeros((samples))
+
+        for indx,i in enumerate(sampling_array):
+            recombined_spectra = self.generate_recombined_spectra(shot_by_shot,i)
+            fittings = [ self.fit_cubic_spline(recombined_spectra) for _ in range(repeats) ]
+
+            if np.isin(-1,fittings):
+                break
+
+            fwhms = [ fittings[d][3] - fittings[d][2] for d in range(repeats) ]
+            fwhm_stddevs[indx] = np.std(fwhms)
         
-        ## Creates some empty space that would be nice to have
-        std_sampling_frequency = 10
+        fwhm_assessment = {"images_used":sampling_array,
+                            "fwhm_stddevs":fwhm_stddevs}
+        return fwhm_assessment
+
+    def do_cubic_interpolation_for_plots(self):
+        spectra = self.reduced_subtracted
+        cubic_dict = self.fit_cubic_spline(spectra)
+
+        if cubic_dict is -1:
+            return cubic_dict
+
+        y_fit = cubic_dict["y_fit"]
+        roots = cubic_dict["rvals"]
+        max_interp = round(np.max(y_fit),4)
+        fwhm = roots[1]-roots[0]
+        cubic_dict["fwhm"] = fwhm
+        cubic_dict["max"] = max_interp
+        cubic_dict["stddevs"] = sampling_array
+        cubic_dict["fwhm_stddevs"] = fwhm_stddevs
+        return cubic_dict
+
+    def do_std_calc_for_plots(self):
+        ## Grabs some data that we need    
+        shot_by_shot_matrix = self.shot_by_shot_subtracted
+        images = self.total_images
+
+        if images == 1:
+            return "Single image skipping stddev Calc"
+
+        std_sampling_frequency = self.set_sampling_frequency()
+
         minimal_percentage = 0.05
-
-        std_sample_no = images - (images%std_sampling_frequency)
-        rounded_images = images - (images%std_sample_no)
-        number_photons = np.zeros((std_sample_no))
-        running_pixel_std = np.zeros((std_sample_no))
-        image_sampling = np.linspace(std_sampling_frequency,rounded_images,std_sample_no)
-
-        ## Calculate the std as a function of somethin
-
-        for indx,i in enumerate(image_sampling):
+        print(std_sampling_frequency)
+        image_sampling_vector,samples = self.generate_image_averaging(std_sampling_frequency,images)
+        number_photons = np.zeros((samples))
+        running_pixel_std = np.zeros((samples))
+        # print(image_sampling_vector,samples)
+        for indx,i in enumerate(image_sampling_vector):
             a = int(i)
             reduced_spectra = np.mean(shot_by_shot_matrix[0:a,:],axis=0)
             running_pixel_std[indx] = np.std(reduced_spectra)
             number_photons[indx] = np.sum(shot_by_shot_matrix[0:a,:])
 
         pars1, _, _ = self.power_func_fit(number_photons,running_pixel_std)
-
         fitted_std_curve = [ self.func_powerlaw(i,pars1[0],pars1[1],pars1[2]) for i in number_photons ]
 
         # back calculate the improvement in 

@@ -9,7 +9,7 @@ from numpy.core.numeric import convolve
 from numpy.lib import histograms
 from numpy.lib.histograms import histogram
 import scipy as sp
-from xes_dataset import XesDataset as xs
+# from xes_dataset import XesDataset as xs
 from scipy.optimize import curve_fit
 from scipy.ndimage.filters import uniform_filter1d
 from scipy import constants
@@ -102,19 +102,20 @@ def calc_photon_accumulation_rate(detector_area,exposure_time):
 def calculate_histogram(data,binning):
     return np.histogram(data,bins=np.linspace(data.min(),data.max(),binning))
 
-def calculate_interpolation(spectra,moving_windows,smoothing):
+def calculate_moving_average(spectra,moving_windows):
     spectral_length = len(spectra)
     reduced_spectra_convolved = uniform_filter1d(spectra, size=moving_windows)
-    x = np.linspace(0, spectral_length, num=spectral_length, endpoint=True)
+    # moving_window_spectra = np.linspace(0, spectral_length, num=spectral_length, endpoint=True)
+    return reduced_spectra_convolved
 
+def calculate_cubic_interpolation(spectra,smoothing):
     # Calculate smoothing
-    # Inplemented automatic smoothness suggested here https://github.com/scipy/scipy/issues/11916
-    smoothing = 1/np.std(spectra)
-    print(smoothing)
+    spectral_length = len(spectra)
+    x = np.linspace(0,spectral_length,num=spectral_length,endpoint=True)
     reduced_spectra_interp1d = scipy.interpolate.splrep(x, spectra,s=smoothing)
     newx = np.linspace(1,spectral_length,spectral_length)
     newy = scipy.interpolate.splev(newx,reduced_spectra_interp1d,der=0)
-    return reduced_spectra_convolved,newx,newy
+    return newx,newy
 
 
 ### OUTPUT PLOTTING FUNCTIONS ###
