@@ -47,10 +47,11 @@ def process_args():
 
 def plot_interpolations(dataset_obj,args):
 
+    error_codes = [-1,-2]
     reduced_subtracted = dataset_obj.get_reduced_subtracted()
     power_fit = dataset_obj.get_power_fit_dict()
 
-    if type(power_fit) is not str:
+    if np.isin(power_fit,error_codes) == False:
         running_diff_std = power_fit["running_std"]
         number_photons = power_fit["tot_photons_array"]
         est_double_std = power_fit["est_double_std"]
@@ -61,8 +62,10 @@ def plot_interpolations(dataset_obj,args):
         printable_final_std = round(running_diff_std[-1],8)
         printable_est_std = round(est_double_std,8)
         printable_percent_imp = round(percentage_improvement,2)
-    else:
-        print(power_fit)
+    elif power_fit == -2:
+        print("Single image skipping stddev calc")
+    elif power_fit == -1:
+        print("Couldn't fit stddev")
 
 
     moving_average,max_average,y_average = dataset_obj.do_moving_average_for_plots()
@@ -72,8 +75,8 @@ def plot_interpolations(dataset_obj,args):
     cubic_dict = dataset_obj.do_cubic_interpolation_for_plots()
 
     if fwhm_dict is not -1:
-        stddevs_sampling = fwhm_dict["stddev_sampling"]
-        stddevs = fwhm_dict["stddevs"]
+        stddevs_sampling = fwhm_dict["images_used"]
+        stddevs = fwhm_dict["fwhm_stddevs"]
 
     if cubic_dict is not -1:
         max_interp = cubic_dict["max"]
@@ -95,7 +98,7 @@ def plot_interpolations(dataset_obj,args):
 
     plt.legend()
 
-    if type(power_fit) is not str:
+    if np.isin(power_fit,error_codes) == False:
         plt.subplot(222)
         plt.scatter(number_photons,running_diff_std,marker="1",s=15,label=f"Final std = {printable_final_std}")
         plt.plot(number_photons,power_curve_fit,color='red')
@@ -109,7 +112,7 @@ def plot_interpolations(dataset_obj,args):
 
     if fwhm_dict is not -1:
         plt.subplot(121)
-        plt.plot(stddevs_sampling,stddevs)
+        plt.scatter(stddevs_sampling,stddevs)
 
     # plt.subplot(212)
     # plt.plot(np.diff(running_diff_std))

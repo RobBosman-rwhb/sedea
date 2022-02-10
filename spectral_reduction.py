@@ -282,15 +282,24 @@ def reduce_data(dataset,info,args):
 
         # Creating the ROI spectra, and associated background spectra.
         if args.focal_orientation == 0:
-            reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)    
-            bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0) 
-            bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0) 
+            reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)
+            bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0)
+            bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0)
         if args.focal_orientation == 1:
-            reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)      
-            bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0)   
-            bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0) 
+            reduced_spectra_matrix[i,:] = np.mean(single_shot_data_filt[ROImin:ROImax,:],axis=0)
+            bg1_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg1_min:ROI_bg1_max,:],axis=0)
+            bg2_reduced[i,:] = np.mean(single_shot_data_filt[ROI_bg2_min:ROI_bg2_max,:],axis=0)
 
         summed_image = summed_image + single_shot_data
+
+    if args.focal_orientation == 1:
+        sig_im = summed_image[ROImin:ROImax,:]
+        bg_im1 = summed_image[ROI_bg1_min:ROI_bg1_max,:]
+        bg_im2 = summed_image[ROI_bg2_min:ROI_bg2_max,:]
+        flux_estimate = sig_im - (bg_im1+bg_im2)/2
+        print(np.sum(flux_estimate))
+        plt.imshow(flux_estimate)
+        plt.show()
 
     if args.average_borders == True:
         summed_image = average_borders(summed_image)

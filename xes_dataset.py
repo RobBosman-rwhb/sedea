@@ -144,17 +144,23 @@ class XesDataset:
     def func_powerlaw(self,x, a, b, c):
         return (a*np.power(x, -b))+c
 
+
     def calc_percentage_improvement(self,x_data,asymptote_level):
         return ((x_data[-1]-asymptote_level) / (x_data[0]-x_data[-1])) * 100
 
+
     def power_func_fit(self,x,y):
         try:
+            print(x,y)
             pars1, cov = curve_fit(f=self.func_powerlaw, xdata=x, ydata=y,
                             p0=[0, 0, 0], bounds=(-1000, 1000),method='dogbox')
         except RuntimeError:
+            if len(x) or len(y) <= 10 :
+                return -1,-1,-1
             pars1,_,_ = self.power_func_fit(x[:-10],y[:-10])
 
         return pars1,len(x),len(y)
+
 
     def generate_image_averaging(self,sampling_freq,images):
         """ Function to calculate a sampling of images and handle non-divisible inputs."""
@@ -163,19 +169,22 @@ class XesDataset:
         image_sampling = np.linspace(sampling_freq,rounded_images,sample_no)
         return image_sampling,sample_no
 
+
     def generate_recombined_spectra(self,sbs_matrix,num):
         index_numbers = random.sample(range(0,len(sbs_matrix[:,0])),int(num))
         return np.mean(sbs_matrix[index_numbers,:],axis=0)
 
     # Private functions that must not be touched?
 
+
     def set_sampling_frequency(self):
         images = self.total_images
         if images < 1 and images > 10:
             std_sampling_frequency = images
         if images > 10:
-            std_sampling_frequency = round(images,-1)
+            std_sampling_frequency = round(images/100,-1)
         return std_sampling_frequency
+
 
     def fit_cubic_spline(self,spectra):
         """Function to fit cublic spline without setting the s variable
@@ -197,6 +206,7 @@ class XesDataset:
         print("Found no cubic spline")
         return -1
 
+
     def do_moving_average_for_plots(self):
         spectra = self.reduced_subtracted
         spectral_length = len(spectra)
@@ -204,6 +214,7 @@ class XesDataset:
         max_average = round(np.max(moving_average),4)
         y = np.linspace(0, spectral_length, num=spectral_length, endpoint=True)
         return moving_average,max_average,y
+
 
     def do_fwhm_assesment_for_plots(self):
         ## Calculate the std as a function of something
@@ -216,8 +227,8 @@ class XesDataset:
         repeats = 5
         sample_freq = self.set_sampling_frequency()
         sampling_array,samples = self.generate_image_averaging(sample_freq,images)
-        sampling_array = np.insert(sampling_array,0,1,axis=0)
-        samples = samples +1
+        # sampling_array = np.insert(sampling_array,0,1,axis=0)
+        # samples = samples +1
         fwhm_stddevs = np.zeros((samples))
 
         for indx,i in enumerate(sampling_array):
@@ -227,12 +238,13 @@ class XesDataset:
             if np.isin(-1,fittings):
                 break
 
-            fwhms = [ fittings[d][3] - fittings[d][2] for d in range(repeats) ]
-            fwhm_stddevs[indx] = np.std(fwhms)
-        
+            roots = [ i["rvals"] for i in fittings ]
+            fwhms = [ roots[d][1] - roots[d][0] for d in range(repeats) ]
+            fwhm_stddevs[indx] = np.mean(fwhms)
         fwhm_assessment = {"images_used":sampling_array,
                             "fwhm_stddevs":fwhm_stddevs}
         return fwhm_assessment
+
 
     def do_cubic_interpolation_for_plots(self):
         spectra = self.reduced_subtracted
@@ -247,9 +259,9 @@ class XesDataset:
         fwhm = roots[1]-roots[0]
         cubic_dict["fwhm"] = fwhm
         cubic_dict["max"] = max_interp
-        cubic_dict["stddevs"] = sampling_array
-        cubic_dict["fwhm_stddevs"] = fwhm_stddevs
+
         return cubic_dict
+
 
     def do_std_calc_for_plots(self):
         ## Grabs some data that we need    
@@ -257,16 +269,16 @@ class XesDataset:
         images = self.total_images
 
         if images == 1:
-            return "Single image skipping stddev Calc"
+            return -2
 
         std_sampling_frequency = self.set_sampling_frequency()
 
         minimal_percentage = 0.05
         print(std_sampling_frequency)
         image_sampling_vector,samples = self.generate_image_averaging(std_sampling_frequency,images)
+        print(image_sampling_vector,samples)
         number_photons = np.zeros((samples))
         running_pixel_std = np.zeros((samples))
-        # print(image_sampling_vector,samples)
         for indx,i in enumerate(image_sampling_vector):
             a = int(i)
             reduced_spectra = np.mean(shot_by_shot_matrix[0:a,:],axis=0)
@@ -274,6 +286,10 @@ class XesDataset:
             number_photons[indx] = np.sum(shot_by_shot_matrix[0:a,:])
 
         pars1, _, _ = self.power_func_fit(number_photons,running_pixel_std)
+        
+        if pars1[0] == -1:
+            return -1
+
         fitted_std_curve = [ self.func_powerlaw(i,pars1[0],pars1[1],pars1[2]) for i in number_photons ]
 
         # back calculate the improvement in 

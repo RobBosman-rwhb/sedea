@@ -14,18 +14,25 @@ def geometrical_resolution(energy,angle,vertical_beam,detector_pitch,bending_rad
 def calc_Etot(a):
     return ((a**2)+(0.065**2)+(0.15**2)+(0.20**2))**0.5
 
+
+def anthea(energy,angle,vertical_beam,detector_pitch,bending_radius):
+    numerator = mpm.cot(np.radians(angle))*((vertical_beam+detector_pitch)*0.001)*energy
+    return numerator/0.5
+
+
 def main():
 
     v_beam_size = 0.1
     theta = 84.2
     ev = 6490
-    pixel_pitch = 0.055
+    pixel_pitch = 0.05
     bending_radius = 500
 
     jung_reso = geometrical_resolution(ev,theta,v_beam_size,0.025,bending_radius)
     medi_reso = geometrical_resolution(ev,theta,v_beam_size,0.055,bending_radius)
     pilatus_reso = geometrical_resolution(ev,theta,v_beam_size,0.172,bending_radius)
-
+    anthea_geo = anthea(ev,theta,v_beam_size,pixel_pitch,bending_radius)
+    print(anthea_geo)
 
     jung_E = round(calc_Etot(jung_reso),2)
     medi_E = round(calc_Etot(medi_reso),2)
